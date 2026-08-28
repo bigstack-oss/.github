@@ -1,3 +1,5 @@
+# CubeCOS: Open-source virtualization and PaaS cloud platform for Kubernetes<br>
+
 <div align="center">
 <br/>
 <br/>
@@ -13,11 +15,9 @@
 <p align="center">Support us with a 🌟 </p>
 <p align="center"> <a href="https://github.com/bigstack-oss/cubecos"><img src="https://img.shields.io/github/stars/bigstack-oss/cubecos?style=social" alt="Github Badge"></a></p>
 
-# CubeCOS: Open-source virtualization and PaaS cloud platform for Kubernetes<br>
-
 ## Introduction
 
-CubecOS is an open-source virtualization and PaaS cloud platform built to streamline deployment and enable flexible integration. It delivers a unified infrastructure stack that you can deploy using a single installation image, providing an out-of-the-box clustered environment with minimal setup.
+CubecOS is an open-source virtualization and Platform-as-a-Service (PaaS) cloud platform designed to streamline deployment and enable flexible integration. It provides a unified infrastructure stack that can be deployed using a single installation image, offering an out-of-the-box clustered environment with minimal setup.
 
 CubecOS includes the following integrated as-a-service modules:
 
@@ -27,9 +27,18 @@ CubecOS includes the following integrated as-a-service modules:
 - High-performance object storage: Provides scalable, high-throughput access to object-based data.
 - Data protection: Built-in backup and recovery capabilities safeguard workloads and data.
 
+## Community
+
+Welcome to the CubeCOS community!
+
+- Join our [Discord][Discord-Url].
+- Chat with us in our community [Slack][Slack-Url].
+- Tune in to our monthly community meeting, and bi-weekly office hours (workshop) [Google Calendar](https://calendar.google.com/calendar/embed?src=c_ad6c6ee5a9fc2ed400a582f4d73314eca41c7edae3b87802d31e1610034a602e%40group.calendar.google.com&ctz=Asia%2FTaipei).
+
 ## Resources
 
-- [Documentation](https://docs.bigstack.co/)
+- [Community Repository](https://github.com/bigstack-oss/community)
+- [CubeCOS Documentation](https://docs.bigstack.co)
 - [YouTube Channel](https://www.youtube.com/@bigstacktech)
 
 ## OSS Projects
@@ -40,6 +49,10 @@ CubecOS includes the following integrated as-a-service modules:
 - [CubeCOS UI](https://github.com/bigstack-oss/cube-cos-ui): The CubeCOS UI provides the front-end interface for the CubeCOS open source cloud platform.
 - [CubeCOS API](https://github.com/bigstack-oss/cube-cos-api): The CubeCOS API provides the distributed RESTful API for the CubeCOS open source cloud platform.
 - [Support Tools](https://github.com/bigstack-oss/support-tool): Useful tools to help you manage and operate your CubeCOS cluster.
+
+## License
+
+CubeCOS and related projects are licensed under the [Apache License, Version 2.0](https://github.com/bigstack-oss/cubecos/blob/develop/LICENSE).
 
 [License-Url]: https://www.apache.org/licenses/LICENSE-2.0
 [License-Image]: https://img.shields.io/badge/License-Apache2-blue.svg?style=flat-square
