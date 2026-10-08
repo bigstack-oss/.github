@@ -1,0 +1,194 @@
+name: 🔒 Security Issue
+title: "[SEC] "
+description: Report a security vulnerability or finding for internal triage. Do not use this template for public disclosures.
+labels:
+  - security
+assignees:
+  - bigstack-oss/qa
+  - leechienpang
+
+  # ── 1. CLASSIFICATION ─────────────────────────────────────────────────────
+body:
+  - type: input
+    id: cve_id
+    attributes:
+      label: CVE / Advisory ID (if applicable)
+      placeholder: "CVE-YYYY-NNNNN or N/A"
+    validations:
+      required: false
+
+  - type: dropdown
+    id: disclosure_status
+    attributes:
+      label: Disclosure Status
+      options:
+        - Internal only – no external parties aware
+        - Coordinated with vendor / upstream (open source)
+        - CVE requested / assigned
+        - Reported by external researcher (coordinated disclosure)
+        - Already public (0-day / in-the-wild)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Use CVSS v3.1 as a guide. When in doubt, escalate.
+      options:
+        - "Critical (CVSS 9.0–10.0)"
+        - "High (CVSS 7.0–8.9)"
+        - "Medium (CVSS 4.0–6.9)"
+        - "Low (CVSS 0.1–3.9)"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Vulnerability Category
+      description: Select the closest matching category.
+      options:
+        - Authentication / Authorization
+        - Cryptographic Weakness / PQC Gap
+        - Injection (SQL, Command, LDAP, etc.)
+        - Insecure Configuration / Hardening Gap
+        - Sensitive Data Exposure
+        - Supply Chain / Dependency Risk
+        - Network Exposure (cleartext, open port, etc.)
+        - Privilege Escalation
+        - Denial of Service
+        - Container / VM Escape
+        - Secrets / Credential Leakage
+        - Other
+    validations:
+      required: false
+
+  - type: dropdown
+    id: affected_product
+    attributes:
+      label: Affected Product / Component
+      description: Select all that apply.
+      multiple: true
+      options:
+        - CubeCOS
+        - CubeCMP
+        - CubeVDI
+        - CubeDPX
+        - Infrastructure (CI/CD, Build Pipeline)
+        - Third-party Dependency
+        - Other / Unknown
+    validations:
+      required: true
+
+  - type: input
+    id: affected_version
+    attributes:
+      label: Affected Version(s)
+      description: If you know the affected versions, list them here (e.g. CubeCOS v3.2.1, CubeCMP v2.4.0-rc1). If unknown, enter "Unknown".
+      placeholder: "vX.Y.Z"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: Environment Where Found
+      options:
+        - Production
+        - Staging / Pre-prod
+        - Development / Local
+        - CI/CD Pipeline
+        - Customer Environment (anonymized)
+        - External Audit / Pentest
+    validations:
+      required: true
+
+  - type: dropdown
+    id: customer_impact
+    attributes:
+      label: Known Customer Impact?
+      options:
+        - "No – internal finding only"
+        - "Potentially yes – needs investigation"
+        - "Yes – customer(s) affected (notify security-team immediately)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: One-paragraph description of the vulnerability and its security impact.
+      placeholder: "Briefly describe what the issue is and why it matters."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce
+      description: Provide a minimal, reliable reproduction path. Include commands, configs, or payloads where relevant.
+      placeholder: |
+        1. Deploy CubeCOS with default config
+        2. Send the following request: ...
+        3. Observe: ...
+    validations:
+      required: false
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact Assessment
+      description: |
+        Describe the blast radius: data confidentiality, integrity, or availability impact.
+        Call out any compliance relevance (e.g. DISA STIG, NIST SP 800-53, Taiwan PDPA).
+      placeholder: "An unauthenticated attacker could..."
+    validations:
+      required: false
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence / Artifacts
+      description: |
+        Paste logs, packet captures, screenshots, or CVE references.
+        **Do not paste secrets or credentials here.** Use a private channel for sensitive material.
+      render: shell
+    validations:
+      required: false
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Suggested Remediation
+      description: Propose a fix, patch, configuration change, or workaround if known.
+      placeholder: |
+        Short-term: Disable the affected endpoint via firewall rule.
+        Long-term: Implement mutual TLS on the AMQP broker.
+    validations:
+      required: false
+
+  - type: dropdown
+    id: workaround_available
+    attributes:
+      label: Is a Workaround Available?
+      options:
+        - "Yes – documented below / in remediation field"
+        - "Yes – undocumented, ask reporter"
+        - "No"
+        - "Unknown"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      options:
+        - label: I have selected the correct severity using CVSS v3.1 guidance.
+          required: true
+        - label: I have notified the security team on Slack for Critical / High findings.
+          required: false
+        - label: I have checked that a duplicate issue does not already exist.
+          required: false

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: How tickets are shaped — the scrum-board ticket standard
+    url: https://github.com/bigstack-oss/bigstack-handbook/blob/develop/kb/bigstack/workflows/scrum-board-ticket-standard.md
+    about: Which type carries which fields, the Release › Epic › Story › Feature hierarchy, and the three moments fields are set. Filing from a terminal or an agent? Use `handbook ticket create`.

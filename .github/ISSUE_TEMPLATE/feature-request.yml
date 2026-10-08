@@ -1,0 +1,108 @@
+name: "Feature Request (from Support)"
+description: "Request a new feature based on customer feedback collected by Support."
+title: "[Feature Request] <short description>"
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Reporter Information (Internal)
+  - type: input
+    id: reporter_name
+    attributes:
+      label: Support Engineer Name
+      placeholder: e.g., John Doe
+    validations:
+      required: true
+  - type: input
+    id: department
+    attributes:
+      label: Department / Team
+      placeholder: e.g., CustomerSupport
+    validations:
+      required: true
+  - type: input
+    id: date_reported
+    attributes:
+      label: Date Reported
+      placeholder: YYYY-MM-DD
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Product, Request Type & Priority
+  - type: dropdown
+    id: product
+    attributes:
+      label: Product
+      description: Which product the request is about.
+      options:
+        - CubeCMP
+        - CubeCOS
+        - CubeVDI
+        - CubeDPX
+        - Other / cross-product
+    validations:
+      required: true
+  - type: dropdown
+    id: request_type
+    attributes:
+      label: Request Type
+      description: Select the type of request.
+      options:
+        - customer-request
+        - support-request
+        - VIP-request
+        - enhancement
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority Level
+      description: The urgency as Support sees it; the board's Priority is set at triage.
+      options:
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ## Request Details
+  - type: textarea
+    id: business_impact
+    attributes:
+      label: Business Impact
+      description: Describe the impact if this feature is not implemented.
+      placeholder: e.g., Project will be delayed by 2 months without this feature.
+    validations:
+      required: true
+  - type: textarea
+    id: background
+    attributes:
+      label: Feature Request Background
+      description: Describe the scenario or problem that led to this request.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you would like to see implemented.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions Considered
+      description: List any workarounds or other solutions that were considered.
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional Context
+      description: Include logs, screenshots, or other relevant information.
