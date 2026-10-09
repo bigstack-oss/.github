@@ -30,6 +30,39 @@ local set to this base by skeleton and flags drift, the way `handbook dod` flags
 note; `handbook ticket create` validates a body against the repo's own template first, then
 this base — GitHub's own precedence.
 
+## The PR-event workflow
+
+[`.github/workflows/pr-lifecycle.yml`](.github/workflows/pr-lifecycle.yml) is a reusable
+workflow that moves [board #45](https://github.com/orgs/bigstack-oss/projects/45) with a pull
+request: draft → `In Progress`, ready for review → `In Review`, merged → `Done` for the issues
+the PR closes, never demoting. At the merge it does the Done moment an agent must not do by
+hand: closes the `Closes`d issues (a bot merge does not fire closing keywords), applies the
+body's `QA-Status:` line to the QA Status field and ticks the ticket's box, lists unticked DoD
+lines in one comment, and regenerates the progress block on every parent up to the Release.
+On open and edit its `linked-issue` job fails when the PR names no ticket on the board or an
+issue it closes is also closed by another open PR. The logic is `handbook pr-event` in
+[bigstack-handbook](https://github.com/bigstack-oss/bigstack-handbook/tree/develop/tools/handbook#the-pr-event-command);
+this file fetches the released binary and runs it.
+
+**Adding a repository** — one file, `.github/workflows/pr-lifecycle.yml`:
+
+```yaml
+name: pr-lifecycle
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize, ready_for_review, converted_to_draft, closed]
+jobs:
+  lifecycle:
+    uses: bigstack-oss/.github/.github/workflows/pr-lifecycle.yml@develop
+    secrets:
+      RECONCILER_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+```
+
+`RECONCILER_TOKEN` is an org secret (Projects write, Issues write, read on bigstack-handbook
+for the release download). Inputs `runs-on` (default `ubuntu-latest`), `board` (45) and
+`handbook-version` (`latest`) are optional. To make the check required, add
+`lifecycle / linked-issue` to the branch ruleset of `develop`.
+
 ## Changing a template
 
 Open a PR against `develop`. Keep: the `type:` in every issue template's front matter (the

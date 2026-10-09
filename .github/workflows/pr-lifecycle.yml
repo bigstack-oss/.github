@@ -1,0 +1,78 @@
+name: pr-lifecycle
+
+# The board moves with the pull request (bigstack-oss/.github#28): draft → In
+# Progress, ready → In Review, merged → Done for the issues the PR closes, never
+# demoting. At the merge, the Done moment the agent must not do itself: close
+# the Closes'd issues (a bot merge does not fire closing keywords), apply the
+# body's `QA-Status:` line to the board's QA Status and tick the ticket's box,
+# list unticked DoD lines in one comment, regenerate the progress block on
+# every parent up to the Release. On open and edit, the `linked-issue` check
+# fails when the PR names no ticket on the board or breaks the multi-PR rule.
+#
+# The logic is `handbook pr-event` (bigstack-oss/bigstack-handbook,
+# tools/handbook/internal/prflow); this file only fetches the released binary
+# and runs it. Callers pass nothing but the token — see README.md.
+on:
+  workflow_call:
+    secrets:
+      RECONCILER_TOKEN:
+        description: PAT with org Projects write, Issues write, and read on bigstack-oss/bigstack-handbook for the release download
+        required: true
+    inputs:
+      runs-on:
+        description: runner label (JSON array string or a single label)
+        type: string
+        default: ubuntu-latest
+      board:
+        description: the org Project number
+        type: number
+        default: 45
+      handbook-version:
+        description: handbook release tag to run, or latest
+        type: string
+        default: latest
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  linked-issue:
+    name: linked-issue
+    if: contains(fromJSON('["opened","edited","reopened","synchronize","ready_for_review"]'), github.event.action)
+    runs-on: ${{ inputs.runs-on }}
+    env:
+      GH_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+    steps:
+      - name: Install handbook
+        run: |
+          set -euo pipefail
+          args=(-R bigstack-oss/bigstack-handbook -p handbook-linux-amd64 -O "$RUNNER_TEMP/handbook" --clobber)
+          [ "${{ inputs.handbook-version }}" = latest ] || args+=("${{ inputs.handbook-version }}")
+          gh release download "${args[@]}"
+          chmod +x "$RUNNER_TEMP/handbook"
+          "$RUNNER_TEMP/handbook" version
+      - name: The PR names a ticket on the board
+        run: '"$RUNNER_TEMP/handbook" pr-event --job linked-issue --board ${{ inputs.board }}'
+
+  board:
+    name: board
+    runs-on: ${{ inputs.runs-on }}
+    # One run per PR at a time: a ready_for_review right after an opened must
+    # not race it on the same board row.
+    concurrency:
+      group: pr-lifecycle-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+    env:
+      GH_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+    steps:
+      - name: Install handbook
+        run: |
+          set -euo pipefail
+          args=(-R bigstack-oss/bigstack-handbook -p handbook-linux-amd64 -O "$RUNNER_TEMP/handbook" --clobber)
+          [ "${{ inputs.handbook-version }}" = latest ] || args+=("${{ inputs.handbook-version }}")
+          gh release download "${args[@]}"
+          chmod +x "$RUNNER_TEMP/handbook"
+          "$RUNNER_TEMP/handbook" version
+      - name: Move the board
+        run: '"$RUNNER_TEMP/handbook" pr-event --job board --board ${{ inputs.board }}'
