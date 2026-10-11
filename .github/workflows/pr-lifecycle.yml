@@ -16,7 +16,7 @@ on:
   workflow_call:
     secrets:
       RECONCILER_TOKEN:
-        description: PAT with org Projects write, Issues write, and read on bigstack-oss/bigstack-handbook for the release download
+        description: PAT with org Projects write, Issues write on the calling repos, and Contents read on bigstack-oss/bigstack-handbook (private) for the release download — a fine-grained token must list that repository
         required: true
     inputs:
       runs-on:
@@ -49,7 +49,10 @@ jobs:
           set -euo pipefail
           args=(-R bigstack-oss/bigstack-handbook -p handbook-linux-amd64 -O "$RUNNER_TEMP/handbook" --clobber)
           [ "${{ inputs.handbook-version }}" = latest ] || args+=("${{ inputs.handbook-version }}")
-          gh release download "${args[@]}"
+          gh release download "${args[@]}" || {
+            echo "::error::RECONCILER_TOKEN cannot read bigstack-oss/bigstack-handbook releases (it is a private repo) — grant the token Contents: read on that repository"
+            exit 1
+          }
           chmod +x "$RUNNER_TEMP/handbook"
           "$RUNNER_TEMP/handbook" version
       - name: The PR names a ticket on the board
@@ -71,7 +74,10 @@ jobs:
           set -euo pipefail
           args=(-R bigstack-oss/bigstack-handbook -p handbook-linux-amd64 -O "$RUNNER_TEMP/handbook" --clobber)
           [ "${{ inputs.handbook-version }}" = latest ] || args+=("${{ inputs.handbook-version }}")
-          gh release download "${args[@]}"
+          gh release download "${args[@]}" || {
+            echo "::error::RECONCILER_TOKEN cannot read bigstack-oss/bigstack-handbook releases (it is a private repo) — grant the token Contents: read on that repository"
+            exit 1
+          }
           chmod +x "$RUNNER_TEMP/handbook"
           "$RUNNER_TEMP/handbook" version
       - name: Move the board
