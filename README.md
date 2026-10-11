@@ -39,8 +39,10 @@ the PR closes, never demoting. At the merge it does the Done moment an agent mus
 hand: closes the `Closes`d issues (a bot merge does not fire closing keywords), applies the
 body's `QA-Status:` line to the QA Status field and ticks the ticket's box, lists unticked DoD
 lines in one comment, and regenerates the progress block on every parent up to the Release.
-On open and edit its `linked-issue` job fails when the PR names no ticket on the board or an
-issue it closes is also closed by another open PR. The logic is `handbook pr-event` in
+On open, edit and the `done` label its `linked-issue` job is the merge gate: it fails when the PR
+names no ticket on the board, an issue it closes is also closed by another open PR, or the ticket it
+closes is not ready for Done — no `QA-Status:` line (Story/Feature/Bug), no Planned Sprint, no Story
+Points on a pointed type, or an unticked DoD line without a ` — ` note. The logic is `handbook pr-event` in
 [bigstack-handbook](https://github.com/bigstack-oss/bigstack-handbook/tree/develop/tools/handbook#the-pr-event-command);
 this file fetches the released binary and runs it.
 
@@ -50,7 +52,7 @@ this file fetches the released binary and runs it.
 name: pr-lifecycle
 on:
   pull_request:
-    types: [opened, edited, reopened, synchronize, ready_for_review, converted_to_draft, closed]
+    types: [opened, edited, reopened, synchronize, ready_for_review, converted_to_draft, labeled, closed]
 jobs:
   lifecycle:
     uses: bigstack-oss/.github/.github/workflows/pr-lifecycle.yml@develop

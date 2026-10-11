@@ -6,8 +6,10 @@ name: pr-lifecycle
 # the Closes'd issues (a bot merge does not fire closing keywords), apply the
 # body's `QA-Status:` line to the board's QA Status and tick the ticket's box,
 # list unticked DoD lines in one comment, regenerate the progress block on
-# every parent up to the Release. On open and edit, the `linked-issue` check
-# fails when the PR names no ticket on the board or breaks the multi-PR rule.
+# every parent up to the Release. On open, edit and the `done` label, the
+# `linked-issue` check is the merge gate: it fails when the PR names no ticket on
+# the board, breaks the multi-PR rule, or the ticket it closes is not ready for
+# Done (QA line, Planned Sprint, Story Points, DoD boxes).
 #
 # The logic is `handbook pr-event` (bigstack-oss/bigstack-handbook,
 # tools/handbook/internal/prflow); this file only fetches the released binary
@@ -39,7 +41,8 @@ permissions:
 jobs:
   linked-issue:
     name: linked-issue
-    if: contains(fromJSON('["opened","edited","reopened","synchronize","ready_for_review"]'), github.event.action)
+    # Re-runs on `labeled` so the `done` label re-reads the ticket: this is the merge gate.
+    if: contains(fromJSON('["opened","edited","reopened","synchronize","ready_for_review","labeled"]'), github.event.action)
     runs-on: ${{ inputs.runs-on }}
     env:
       GH_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
