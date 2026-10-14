@@ -3,7 +3,7 @@ name: pr-lifecycle
 # The board moves with the pull request (bigstack-oss/.github#28): draft → In
 # Progress, ready → In Review, merged → Done for the issues the PR closes, never
 # demoting. At the merge, the Done moment the agent must not do itself: close
-# the Closes'd issues (a bot merge does not fire closing keywords), apply the
+# the Closes'd issues still open (a no-op when closing keywords already did), apply the
 # body's `QA-Status:` line to the board's QA Status and tick the ticket's box,
 # list unticked DoD lines in one comment, regenerate the progress block on
 # every parent up to the Release. On open, edit and the `done` label, the

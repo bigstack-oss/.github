@@ -36,7 +36,7 @@ this base — GitHub's own precedence.
 workflow that moves [board #45](https://github.com/orgs/bigstack-oss/projects/45) with a pull
 request: draft → `In Progress`, ready for review → `In Review`, merged → `Done` for the issues
 the PR closes, never demoting. At the merge it does the Done moment an agent must not do by
-hand: closes the `Closes`d issues (a bot merge does not fire closing keywords), applies the
+hand: closes the `Closes`d issues still open, applies the
 body's `QA-Status:` line to the QA Status field and ticks the ticket's box, lists unticked DoD
 lines in one comment, and regenerates the progress block on every parent up to the Release.
 On open, edit and the `done` label its `linked-issue` job is the merge gate: it fails when the PR
@@ -64,6 +64,44 @@ jobs:
 for the release download). Inputs `runs-on` (default `ubuntu-latest`), `board` (45) and
 `handbook-version` (`latest`) are optional. To make the check required, add
 `lifecycle / linked-issue` to the branch ruleset of `develop`.
+
+The `closed` event only reaches this workflow when the merge is made with a token other than
+`GITHUB_TOKEN` — GitHub starts no runs for events that token causes. Merge with `done-merge` below.
+
+## The done-merge workflow
+
+[`.github/workflows/done-merge.yml`](.github/workflows/done-merge.yml) merges a PR when a
+maintainer applies the `done` label. It waits until every check GitHub marks as **required** for
+the PR is green and GitHub reports it mergeable, then **fast-forward pushes** the PR head to the
+base branch with `RECONCILER_TOKEN` (the bigstack-ci-bot account): the reviewed, tested commits
+land unchanged, signatures included, and the push fires `pull_request: closed` and `push` like a
+human merge would. It never rebases. A failed required check, a branch that is behind or
+conflicting, a draft, or new commits pushed after the label: it comments, removes `done`, and
+stops — fix it and apply `done` again. Repo-specific pre-merge work (cubecmp's Jenkins build) is
+a required check of its own.
+
+**Adding a repository** — one file, `.github/workflows/done-merge.yml`:
+
+```yaml
+name: done-merge
+on:
+  pull_request_target:
+    types: [labeled]
+jobs:
+  done-merge:
+    uses: bigstack-oss/.github/.github/workflows/done-merge.yml@develop
+    with:
+      runs-on: '["self-hosted","linux","x64","intranet"]'
+    secrets:
+      RECONCILER_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+```
+
+`pull_request_target` runs the base branch's copy, so a PR cannot change the workflow that merges
+it. The token needs **Contents: read & write** and **Pull requests: read** on the repository, and
+the bot needs write access there. Inputs `runs-on` (default `ubuntu-latest`; it polls for up to
+`timeout-minutes`, default 120, so prefer a self-hosted runner), `delete-branch` (true) and
+`timeout-minutes` are optional. The base branch must allow the bot to push a fast-forward that
+satisfies its required checks — no "restrict who can push" list without the bot in it.
 
 ## Changing a template
 

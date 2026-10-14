@@ -1,0 +1,125 @@
+name: done-merge
+
+# The `done` label merges the pull request (bigstack-handbook#1044, .github#30).
+# It waits until every check GitHub marks as required for this PR is green and
+# GitHub reports the PR mergeable, then fast-forward pushes the head commit to
+# the base branch: the commits that were reviewed and tested are exactly the ones
+# that land, with their signatures. It never rebases; a PR that is behind gets a
+# comment and loses the label.
+#
+# It pushes with RECONCILER_TOKEN (the bigstack-ci-bot account), not
+# GITHUB_TOKEN, on purpose: GitHub starts no workflow runs for events caused by
+# GITHUB_TOKEN, so a GITHUB_TOKEN merge never fires `pull_request: closed` (the
+# PR-event workflow's Done moment) or `push` to the base (post-merge jobs such as
+# a release). A push made with the bot's token fires both, and GitHub's closing
+# keywords close the PR's `Closes` issues.
+#
+# Callers trigger it on `pull_request_target: labeled`, so the workflow that
+# merges is always the base branch's, never one the PR edited. Repo-specific
+# pre-merge work (cubecmp's Jenkins build) is a required check of its own; this
+# file knows nothing about it. See README.md.
+on:
+  workflow_call:
+    inputs:
+      runs-on:
+        description: 'JSON runner label(s), e.g. ''"ubuntu-latest"'' or ''["self-hosted","linux","x64","intranet"]'''
+        type: string
+        default: '"ubuntu-latest"'
+      delete-branch:
+        description: delete the head branch after the merge
+        type: boolean
+        default: true
+      timeout-minutes:
+        description: how long to wait for the required checks
+        type: number
+        default: 120
+    secrets:
+      RECONCILER_TOKEN:
+        description: bigstack-ci-bot token with Contents write and Pull requests read on the repository
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  merge:
+    name: merge
+    if: github.event.label.name == 'done'
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    timeout-minutes: ${{ fromJSON(inputs.timeout-minutes) }}
+    concurrency:
+      group: done-merge-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
+    env:
+      GH_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+      REPO: ${{ github.repository }}
+      PR: ${{ github.event.pull_request.number }}
+      SHA: ${{ github.event.pull_request.head.sha }}
+      BASE: ${{ github.event.pull_request.base.ref }}
+      HEAD_REF: ${{ github.event.pull_request.head.ref }}
+      SAME_REPO: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    steps:
+      - name: Wait for the required checks
+        id: wait
+        shell: bash
+        run: |
+          set -euo pipefail
+          stop() { # comment, take the label off so re-applying it starts over, fail
+            gh pr comment "$PR" -R "$REPO" --body "**done-merge did not merge \`${SHA:0:7}\`:** $1 Fix it, then apply \`done\` again." || true
+            gh pr edit "$PR" -R "$REPO" --remove-label done || true
+            echo "::error::$1"; exit 1
+          }
+          [ "$SAME_REPO" = "true" ] || stop "the head branch is in a fork; merge it by hand."
+          owner=${REPO%/*}; name=${REPO#*/}
+          q='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){
+              state isDraft headRefOid mergeStateStatus labels(first:50){nodes{name}}
+              commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{__typename
+                ... on CheckRun{name status conclusion isRequired(pullRequestNumber:$n)}
+                ... on StatusContext{context state isRequired(pullRequestNumber:$n)}}}}}}}}}}'
+          while true; do
+            pr=$(gh api graphql -f query="$q" -f o="$owner" -f r="$name" -F n="$PR" --jq .data.repository.pullRequest)
+            state=$(jq -r .state <<<"$pr")
+            [ "$state" = "OPEN" ] || { echo "PR is $state — nothing to do"; exit 0; }
+            jq -e '[.labels.nodes[].name] | index("done")' <<<"$pr" >/dev/null \
+              || { echo "the done label was removed — stopping"; exit 0; }
+            [ "$(jq -r .isDraft <<<"$pr")" = "false" ] || stop "the PR is a draft."
+            [ "$(jq -r .headRefOid <<<"$pr")" = "$SHA" ] || stop "new commits were pushed after \`done\` was applied."
+            failed=$(jq -r '[.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]?
+                | select(.isRequired)
+                | select((.conclusion // "") as $c | (.state // "") as $s
+                    | ($c|IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) or ($s|IN("FAILURE","ERROR")))
+                | (.name // .context)] | join(", ")' <<<"$pr")
+            [ -z "$failed" ] || stop "required check(s) failed: $failed."
+            merge_state=$(jq -r .mergeStateStatus <<<"$pr")
+            echo "$(date -u +%H:%M:%S) mergeStateStatus=$merge_state"
+            case "$merge_state" in
+              CLEAN|UNSTABLE|HAS_HOOKS) break ;;
+              BEHIND) stop "the branch is behind \`$BASE\`; rebase onto it and force-push with lease." ;;
+              DIRTY) stop "the branch conflicts with \`$BASE\`; rebase onto it." ;;
+            esac
+            sleep 30 # BLOCKED / UNKNOWN: a required check is still pending or not yet reported
+          done
+
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.ref }}
+          fetch-depth: 0
+          token: ${{ secrets.RECONCILER_TOKEN }}
+
+      - name: Fast-forward the base to the PR head
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch origin "$SHA" "+refs/heads/$BASE:refs/remotes/origin/$BASE"
+          if ! git merge-base --is-ancestor "origin/$BASE" "$SHA"; then
+            gh pr comment "$PR" -R "$REPO" --body "**done-merge did not merge \`${SHA:0:7}\`:** \`$BASE\` moved while the checks ran; rebase onto it and apply \`done\` again." || true
+            gh pr edit "$PR" -R "$REPO" --remove-label done || true
+            echo "::error::$BASE moved"; exit 1
+          fi
+          git push origin "$SHA:refs/heads/$BASE"
+          echo "merged ${SHA:0:7} into $BASE" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Delete the head branch
+        if: inputs.delete-branch
+        shell: bash
+        run: git push origin --delete "$HEAD_REF" || echo "branch already gone"
