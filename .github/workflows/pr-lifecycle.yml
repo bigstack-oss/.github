@@ -5,8 +5,8 @@ name: pr-lifecycle
 # demoting. At the merge, the Done moment the agent must not do itself: close
 # the Closes'd issues still open (a no-op when closing keywords already did), apply the
 # body's `QA-Status:` line to the board's QA Status and tick the ticket's box,
-# list unticked DoD lines in one comment, regenerate the progress block on
-# every parent up to the Release. On open, edit and the `done` label, the
+# list unticked DoD lines in one comment. Parent bodies are never written (GitHub's
+# sub-issue summary is the progress). On open, edit and the `done` label, the
 # `linked-issue` check is the merge gate: it fails when the PR names no ticket on
 # the board, breaks the multi-PR rule, or the ticket it closes is not ready for
 # Done (QA line, Planned Sprint, Story Points, DoD boxes).

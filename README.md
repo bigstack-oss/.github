@@ -38,7 +38,7 @@ request: draft → `In Progress`, ready for review → `In Review`, merged → `
 the PR closes, never demoting. At the merge it does the Done moment an agent must not do by
 hand: closes the `Closes`d issues still open, applies the
 body's `QA-Status:` line to the QA Status field and ticks the ticket's box, lists unticked DoD
-lines in one comment, and regenerates the progress block on every parent up to the Release.
+lines in one comment. Parent bodies are never written: GitHub's sub-issue summary is the progress.
 On open, edit and the `done` label its `linked-issue` job is the merge gate: it fails when the PR
 names no ticket on the board, an issue it closes is also closed by another open PR, or the ticket it
 closes is not ready for Done — no `QA-Status:` line (Story/Feature/Bug), no Planned Sprint, no Story
