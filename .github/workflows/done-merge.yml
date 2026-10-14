@@ -7,12 +7,15 @@ name: done-merge
 # that land, with their signatures. It never rebases; a PR that is behind gets a
 # comment and loses the label.
 #
-# It pushes with RECONCILER_TOKEN (the bigstack-ci-bot account), not
-# GITHUB_TOKEN, on purpose: GitHub starts no workflow runs for events caused by
+# It reads and comments with GITHUB_TOKEN, and pushes with RECONCILER_TOKEN
+# (the bigstack-ci-bot account). A fine-grained token cannot read check runs
+# (there is no Checks permission for it), so the reads stay on GITHUB_TOKEN;
+# the push must not use GITHUB_TOKEN: GitHub starts no workflow runs for events caused by
 # GITHUB_TOKEN, so a GITHUB_TOKEN merge never fires `pull_request: closed` (the
 # PR-event workflow's Done moment) or `push` to the base (post-merge jobs such as
 # a release). A push made with the bot's token fires both, and GitHub's closing
-# keywords close the PR's `Closes` issues.
+# keywords close the PR's `Closes` issues. Callers grant the read permissions
+# (see README.md).
 #
 # Callers trigger it on `pull_request_target: labeled`, so the workflow that
 # merges is always the base branch's, never one the PR edited. Repo-specific
@@ -35,7 +38,7 @@ on:
         default: 120
     secrets:
       RECONCILER_TOKEN:
-        description: bigstack-ci-bot token with Contents write and Pull requests read on the repository
+        description: bigstack-ci-bot token with Contents read & write on the repository (used only for the push)
         required: true
 
 permissions:
@@ -50,8 +53,13 @@ jobs:
     concurrency:
       group: done-merge-${{ github.repository }}-${{ github.event.pull_request.number }}
       cancel-in-progress: true
+    permissions:
+      contents: read
+      checks: read
+      statuses: read
+      pull-requests: write # comment and remove the label
     env:
-      GH_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
+      GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
       PR: ${{ github.event.pull_request.number }}
       SHA: ${{ github.event.pull_request.head.sha }}
@@ -77,7 +85,8 @@ jobs:
                 ... on CheckRun{name status conclusion isRequired(pullRequestNumber:$n)}
                 ... on StatusContext{context state isRequired(pullRequestNumber:$n)}}}}}}}}}}'
           while true; do
-            pr=$(gh api graphql -f query="$q" -f o="$owner" -f r="$name" -F n="$PR" --jq .data.repository.pullRequest)
+            pr=$(gh api graphql -f query="$q" -f o="$owner" -f r="$name" -F n="$PR" --jq .data.repository.pullRequest) \
+              || stop "could not read the PR and its checks — the calling workflow must grant \`checks: read\`, \`statuses: read\` and \`pull-requests: write\` (see bigstack-oss/.github README)."
             state=$(jq -r .state <<<"$pr")
             [ "$state" = "OPEN" ] || { echo "PR is $state — nothing to do"; exit 0; }
             jq -e '[.labels.nodes[].name] | index("done")' <<<"$pr" >/dev/null \

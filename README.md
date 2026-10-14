@@ -87,6 +87,11 @@ name: done-merge
 on:
   pull_request_target:
     types: [labeled]
+permissions:
+  contents: read
+  checks: read
+  statuses: read
+  pull-requests: write
 jobs:
   done-merge:
     uses: bigstack-oss/.github/.github/workflows/done-merge.yml@develop
@@ -97,8 +102,9 @@ jobs:
 ```
 
 `pull_request_target` runs the base branch's copy, so a PR cannot change the workflow that merges
-it. The token needs **Contents: read & write** and **Pull requests: read** on the repository, and
-the bot needs write access there. Inputs `runs-on` (default `ubuntu-latest`; it polls for up to
+it. Reads, comments and the label go through `GITHUB_TOKEN` — hence the `permissions:` block; a
+fine-grained token cannot read check runs at all. `RECONCILER_TOKEN` is used only for the push and
+needs **Contents: read & write** on the repository; the bot needs write access there. Inputs `runs-on` (default `ubuntu-latest`; it polls for up to
 `timeout-minutes`, default 120, so prefer a self-hosted runner), `delete-branch` (true) and
 `timeout-minutes` are optional. The base branch must allow the bot to push a fast-forward that
 satisfies its required checks — no "restrict who can push" list without the bot in it.
