@@ -82,8 +82,13 @@ jobs:
           q='query($o:String!,$r:String!,$n:Int!){repository(owner:$o,name:$r){pullRequest(number:$n){
               state isDraft headRefOid mergeStateStatus labels(first:50){nodes{name}}
               commits(last:1){nodes{commit{statusCheckRollup{contexts(first:100){nodes{__typename
-                ... on CheckRun{name status conclusion isRequired(pullRequestNumber:$n)}
-                ... on StatusContext{context state isRequired(pullRequestNumber:$n)}}}}}}}}}}'
+                ... on CheckRun{name status conclusion completedAt isRequired(pullRequestNumber:$n)}
+                ... on StatusContext{context state createdAt isRequired(pullRequestNumber:$n)}}}}}}}}}}'
+          # A check that re-runs on the label (lifecycle / linked-issue) still
+          # shows its previous result for a moment. A failure that finished
+          # before this job started may be that stale result: wait up to
+          # GRACE seconds for the re-run before treating it as real.
+          start=$(date -u +%s); GRACE=180
           while true; do
             pr=$(gh api graphql -f query="$q" -f o="$owner" -f r="$name" -F n="$PR" --jq .data.repository.pullRequest) \
               || stop "could not read the PR and its checks — the calling workflow must grant \`checks: read\`, \`statuses: read\` and \`pull-requests: write\` (see bigstack-oss/.github README)."
@@ -93,12 +98,19 @@ jobs:
               || { echo "the done label was removed — stopping"; exit 0; }
             [ "$(jq -r .isDraft <<<"$pr")" = "false" ] || stop "the PR is a draft."
             [ "$(jq -r .headRefOid <<<"$pr")" = "$SHA" ] || stop "new commits were pushed after \`done\` was applied."
-            failed=$(jq -r '[.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]?
+            fails=$(jq -c --argjson start "$start" '[.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]?
                 | select(.isRequired)
                 | select((.conclusion // "") as $c | (.state // "") as $s
                     | ($c|IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) or ($s|IN("FAILURE","ERROR")))
-                | (.name // .context)] | join(", ")' <<<"$pr")
-            [ -z "$failed" ] || stop "required check(s) failed: $failed."
+                | {name: (.name // .context), stale: (((.completedAt // .createdAt // "") | if . == "" then 0 else fromdateiso8601 end) < $start)}]' <<<"$pr")
+            failed=$(jq -r 'map(.name) | join(", ")' <<<"$fails")
+            if [ -n "$failed" ]; then
+              if jq -e 'all(.stale)' <<<"$fails" >/dev/null && [ $(( $(date -u +%s) - start )) -lt "$GRACE" ]; then
+                echo "$(date -u +%H:%M:%S) $failed failed before done was applied — waiting for a re-run"
+                sleep 30; continue
+              fi
+              stop "required check(s) failed: $failed."
+            fi
             merge_state=$(jq -r .mergeStateStatus <<<"$pr")
             echo "$(date -u +%H:%M:%S) mergeStateStatus=$merge_state"
             case "$merge_state" in
