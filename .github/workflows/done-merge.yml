@@ -98,11 +98,15 @@ jobs:
               || { echo "the done label was removed — stopping"; exit 0; }
             [ "$(jq -r .isDraft <<<"$pr")" = "false" ] || stop "the PR is a draft."
             [ "$(jq -r .headRefOid <<<"$pr")" = "$SHA" ] || stop "new commits were pushed after \`done\` was applied."
+            # The rollup lists every run of a check (each workflow run is its own
+            # check suite), so judge only the latest result per check name.
             fails=$(jq -c --argjson start "$start" '[.commits.nodes[0].commit.statusCheckRollup.contexts.nodes[]?
                 | select(.isRequired)
-                | select((.conclusion // "") as $c | (.state // "") as $s
-                    | ($c|IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) or ($s|IN("FAILURE","ERROR")))
-                | {name: (.name // .context), stale: (((.completedAt // .createdAt // "") | if . == "" then 0 else fromdateiso8601 end) < $start)}]' <<<"$pr")
+                | {name: (.name // .context), c: (.conclusion // ""), s: (.state // ""),
+                   t: (.completedAt // .createdAt // "9999-12-31T23:59:59Z")}]
+                | group_by(.name) | map(max_by(.t))
+                | map(select((.c|IN("FAILURE","CANCELLED","TIMED_OUT","ACTION_REQUIRED","STARTUP_FAILURE")) or (.s|IN("FAILURE","ERROR"))))
+                | map({name, stale: ((.t | fromdateiso8601) < $start)})' <<<"$pr")
             failed=$(jq -r 'map(.name) | join(", ")' <<<"$fails")
             if [ -n "$failed" ]; then
               if jq -e 'all(.stale)' <<<"$fails" >/dev/null && [ $(( $(date -u +%s) - start )) -lt "$GRACE" ]; then
