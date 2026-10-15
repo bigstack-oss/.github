@@ -55,9 +55,9 @@ None
 |---|---|---|
 | 1 | `...` | `...` |
 
-- [ ] **QA Status declared at Done** — when this issue reaches `Done`, set the board's
-      `QA Status` field to `Not needed` or `Ready to QA`. Never leave it empty on a Done
-      ticket; `In QA` / `Verified` are QA's own transitions.
+- [ ] **QA Status declared at Done** — declared in the closing PR's `QA-Status:` line
+      (`Ready to QA` or `Not needed`); the PR-event workflow applies it to the board and
+      ticks this box at the merge. `In QA` / `Verified` are QA's own transitions.
 
 ## Output artifacts (Definition of Done)
 
