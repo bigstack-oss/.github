@@ -10,7 +10,7 @@ assignees: ''
 ---
 
 <!-- Sections marked (Optional) can be deleted when you have nothing for them. Keep every other section, even if brief — the tooling checks they are there.
-     This is the org base. Product repositories (cubecos, cubecmp, …) carry a tailored copy whose Environment rows fit the product; the section skeleton is the same. -->
+     This is the org base. Product repositories (cubecos, lachesis, …) may carry a tailored copy whose Environment rows fit the product; the section skeleton is the same. -->
 
 ## Description
 

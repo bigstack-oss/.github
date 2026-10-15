@@ -16,11 +16,11 @@ set as is: libraries, tools, docs, the long tail. The five process templates (Ep
 Feature, Task, Spike) are the same everywhere by design — they are the standard's artifacts,
 not a product's.
 
-**Tier 2 — a product's own set.** A product repository (cubecos, cubecmp, lachesis, …) keeps a
+**Tier 2 — a product's own set.** A product repository (cubecos, lachesis, …) may keep a
 local `.github/ISSUE_TEMPLATE/` and PR template: **this base plus its own `bug.md` and
-`PULL_REQUEST_TEMPLATE.md`**. A COS bug names a build string, a topology and a component; a CMP
-bug names a URL, a project and an account; cubecmp's PR template adds `QA-Verify:` for its
-build bot. GitHub overrides issue templates *per directory*, so a tier-2 repo carries the whole
+`PULL_REQUEST_TEMPLATE.md`**. A COS bug names a build string, a topology and a component.
+cubecmp inherits this issue set (since 2026-10-15) and keeps only its PR template, which adds
+`QA-Verify:` for its build bot. GitHub overrides issue templates *per directory*, so a tier-2 repo carries the whole
 set locally — which is why the base must stay the skeleton of every local copy.
 
 **What keeps tier 2 honest:** the *skeleton* is the contract — the `##` sections, the QA
