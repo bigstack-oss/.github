@@ -55,7 +55,9 @@ on:
     types: [opened, edited, reopened, synchronize, ready_for_review, converted_to_draft, labeled, closed]
 jobs:
   lifecycle:
-    uses: bigstack-oss/.github/.github/workflows/pr-lifecycle.yml@develop
+    uses: bigstack-oss/.github/.github/workflows/pr-lifecycle.yml@v1
+    with:
+      handbook-version: v0.1.27
     secrets:
       RECONCILER_TOKEN: ${{ secrets.RECONCILER_TOKEN }}
 ```
@@ -94,7 +96,7 @@ permissions:
   pull-requests: write
 jobs:
   done-merge:
-    uses: bigstack-oss/.github/.github/workflows/done-merge.yml@develop
+    uses: bigstack-oss/.github/.github/workflows/done-merge.yml@v1
     with:
       runs-on: '["self-hosted","linux","x64","intranet"]'
     secrets:
@@ -116,3 +118,18 @@ org issue type, not a label), the `## QA Verification` section on User Story / F
 and the `## Output artifacts (Definition of Done)` checkbox on all. Line endings are LF. A
 skeleton change here is a change for every tier-2 copy — say so in the PR, and open the
 follow-up PRs in the product repos.
+
+## Versions — pin, and bump on purpose
+
+A product repository calls these workflows at a **tag** and runs a **pinned** handbook binary,
+so a change in `bigstack-oss/.github` or a new handbook release reaches its required checks
+only when someone bumps it — not the moment it merges. bigstack-handbook stays on `@develop`
+and `latest` as the **canary**: every lifecycle change runs on its own PRs first.
+
+- **`v1`** is a moving major tag on this repository. Compatible fixes move it; a breaking
+  change to a workflow's inputs or behaviour gets `v2`. Move it with a signed tag on `develop`:
+  `git tag -s -f v1 -m "v1: <what changed>" origin/develop && git push -f origin v1`.
+- **`handbook-version`** pins the `handbook` release `pr-lifecycle` downloads. Bump it with a
+  one-line PR in the product repository once the release has run on the handbook's own PRs.
+- **Rollback** is the same line, set back to the last good tag or release.
+
