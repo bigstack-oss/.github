@@ -57,7 +57,7 @@ jobs:
       contents: read
       checks: read
       statuses: read
-      pull-requests: write # comment and remove the label
+      pull-requests: write # comment, remove the label, retarget stacked PRs
     env:
       GH_TOKEN: ${{ github.token }}
       REPO: ${{ github.repository }}
@@ -147,4 +147,17 @@ jobs:
       - name: Delete the head branch
         if: inputs.delete-branch
         shell: bash
-        run: git push origin --delete "$HEAD_REF" || echo "branch already gone"
+        run: |
+          set -euo pipefail
+          # Deleting a branch closes every open PR based on it; GitHub retargets only
+          # when it merges itself. Keep the branch if a retarget fails.
+          children=$(gh pr list -R "$REPO" --base "$HEAD_REF" --state open --json number --jq '.[].number')
+          for n in $children; do
+            if gh api -X PATCH "repos/$REPO/pulls/$n" -f base="$BASE" --silent; then
+              echo "retargeted #$n from $HEAD_REF to $BASE"
+            else
+              echo "::warning::could not retarget #$n, keeping $HEAD_REF so it stays open"
+              exit 0
+            fi
+          done
+          git push origin --delete "$HEAD_REF" || echo "branch already gone"
