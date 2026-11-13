@@ -118,20 +118,24 @@ jobs:
             merge_state=$(jq -r .mergeStateStatus <<<"$pr")
             echo "$(date -u +%H:%M:%S) mergeStateStatus=$merge_state"
             case "$merge_state" in
-              CLEAN|UNSTABLE|HAS_HOOKS) break ;;
+              CLEAN|UNSTABLE|HAS_HOOKS) echo "merge=true" >> "$GITHUB_OUTPUT"; break ;;
               BEHIND) stop "the branch is behind \`$BASE\`; rebase onto it and force-push with lease." ;;
               DIRTY) stop "the branch conflicts with \`$BASE\`; rebase onto it." ;;
             esac
             sleep 30 # BLOCKED / UNKNOWN: a required check is still pending or not yet reported
           done
 
+      # `exit 0` in the wait step ends only that step, so every step that
+      # touches the base must ask whether the wait step chose to merge.
       - uses: actions/checkout@v4
+        if: steps.wait.outputs.merge == 'true'
         with:
           ref: ${{ github.event.pull_request.base.ref }}
           fetch-depth: 0
           token: ${{ secrets.RECONCILER_TOKEN }}
 
       - name: Fast-forward the base to the PR head
+        if: steps.wait.outputs.merge == 'true'
         shell: bash
         run: |
           set -euo pipefail
@@ -145,7 +149,7 @@ jobs:
           echo "merged ${SHA:0:7} into $BASE" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Delete the head branch
-        if: inputs.delete-branch
+        if: inputs.delete-branch && steps.wait.outputs.merge == 'true'
         shell: bash
         run: |
           set -euo pipefail
